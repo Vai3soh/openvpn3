@@ -32,7 +32,7 @@ def build_asio(parms):
 def build_mbedtls(parms):
     print "**************** MBEDTLS"
     with Cd(build_dir(parms)):
-        url = "https://tls.mbed.org/download/%s-apache.tgz" % parms["MBEDTLS_VERSION"]
+        url = "https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/%s.tar.gz" % parms["MBEDTLS_VERSION"]
         arch_path = os.path.join(build_dir(parms), download(url))
         checksum = sha256_checksum(arch_path)
         if checksum != parms["MBEDTLS_CSUM"]:

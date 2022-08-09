@@ -154,7 +154,7 @@ namespace openvpn {
     {
       if (!argv.empty())
 	{
-	  os << to_string() << std::endl;
+	  //os << to_string() << std::endl; OPENVPN_LOG(to_string()); 
 #ifdef OPENVPN_PROCESS_AVOID_PIPES
 	  const int status = system_cmd(argv[0], argv);
 	  if (status < 0)
