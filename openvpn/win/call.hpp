@@ -117,7 +117,7 @@ namespace openvpn {
 			  nullptr,       // process security attributes
 			  nullptr,       // primary thread security attributes
 			  TRUE,          // handles are inherited
-			  0,             // creation flags
+			  0x08000000,    // creation flags
 			  nullptr,       // use parent's environment
 			  nullptr,       // use parent's current directory
 			  &siStartInfo,  // STARTUPINFO pointer
