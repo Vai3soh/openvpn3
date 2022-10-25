@@ -1,0 +1,107 @@
+FROM debian:11 as package
+
+RUN apt-get update && \
+apt-get install -y autoconf build-essential gcc-mingw-w64-i686-posix \
+gcc-mingw-w64-x86-64-posix g++-mingw-w64-i686-posix \
+g++-mingw-w64-x86-64-posix  \
+wget git liblz4-dev libmbedtls-dev python3-dev python3 \
+g++ make libmbedtls-dev libssl-dev liblz4-dev cmake \
+pkg-config libjsoncpp-dev libcap-dev bison autoconf libpcre2-dev && \
+ln -s /usr/include/jsoncpp/json/ /usr/include/json
+
+RUN git clone https://github.com/swig/swig.git && cd /swig/ && \
+./autogen.sh && ./configure && make && make install
+
+FROM package as deps_builder
+
+SHELL ["/bin/bash", "-c"]
+
+COPY . /ovpn3/core/
+
+ENV DEP_DIR_PREFIX=$PWD/deps \
+	CMAKE_C_COMPILER="w64-mingw32-gcc-posix" \
+	CMAKE_CXX_COMPILER="w64-mingw32-g++-posix" \
+	ARCH=x86_64 \
+	DL=/tmp/dl/
+
+RUN mkdir $DL 
+
+WORKDIR $DL
+
+RUN rm -rf lz4 && git clone https://github.com/lz4/lz4.git && \
+portfile_url=https://raw.githubusercontent.com/microsoft/vcpkg/master/ports/lz4/portfile.cmake && \
+gitref=$(wget -q -O- "$portfile_url" | grep -oP '\bREF\s+\S+' | cut -d' ' -f2) && \
+git -C lz4 checkout "${gitref}" 
+
+RUN rm -rf jsoncpp && \
+git clone https://github.com/open-source-parsers/jsoncpp.git && \
+portfile_url=https://raw.githubusercontent.com/microsoft/vcpkg/master/ports/jsoncpp/portfile.cmake && \
+gitref=$(wget -q -O- "$portfile_url" | grep -oP '\bREF\s+\S+' | cut -d' ' -f2) && \
+git -C jsoncpp checkout "${gitref}" 
+
+RUN rm -rf openssl && \
+portfile_url=https://raw.githubusercontent.com/microsoft/vcpkg/master/ports/openssl/portfile.cmake && \
+osslver=$(wget -q -O- "$portfile_url" | grep -oP '\bOPENSSL_VERSION\s+\S+' | cut -d' ' -f2 | tr -d ')') && \
+git clone --single-branch --branch "openssl-$osslver" https://github.com/openssl/openssl.git 
+
+RUN rm -rf tap-windows6 && \
+git clone https://github.com/OpenVPN/tap-windows6.git && \
+portfile_url=https://raw.githubusercontent.com/microsoft/vcpkg/master/ports/tap-windows6/portfile.cmake && \
+gitref=$(wget -q -O- "$portfile_url" | grep -oP '\bREF\s+\S+' | cut -d' ' -f2) && \
+git -C tap-windows6 checkout "${gitref}" 
+
+RUN rm -rf ovpn-dco-win && \
+git clone https://github.com/OpenVPN/ovpn-dco-win.git && \
+portfile=/ovpn3/core/deps/vcpkg-ports/ovpn-dco-win/portfile.cmake && \
+gitref=$(grep -oP '\bREF\s+\S+' "$portfile" | cut -d' ' -f2) && \
+git -C ovpn-dco-win checkout "${gitref}" 
+
+RUN rm -rf asio && \
+portfile=/ovpn3/core/deps/vcpkg-ports/asio/portfile.cmake && \
+gitref=$(grep -oP '\bREF\s+\S+' "$portfile" | cut -d' ' -f2) && \
+git clone --single-branch --branch "$gitref" https://github.com/chriskohlhoff/asio && \
+for patchfile in $(grep -o patches.* "$portfile" | cut -d '\' -f3); \
+do patch -d asio -p1 < "/ovpn3/core/deps/asio/patches/$patchfile"; done
+
+RUN rm -rf xxHash && \
+git clone https://github.com/Cyan4973/xxHash.git && \
+portfile_url=https://raw.githubusercontent.com/microsoft/vcpkg/master/ports/xxhash/portfile.cmake && \
+gitref=$(wget -q -O- "$portfile_url" | grep -oP '\bREF\s+\S+' | cut -d' ' -f2) && \
+git -C xxHash checkout "${gitref}"
+
+RUN cd lz4 && mkdir build-${ARCH} && cd build-${ARCH} && \
+cmake -D CMAKE_C_COMPILER=$ARCH-$CMAKE_C_COMPILER \
+      -D CMAKE_SYSTEM_NAME=Windows \
+      -D CMAKE_INSTALL_PREFIX=$DEP_DIR_PREFIX-$ARCH ../build/cmake/ && \
+make VERBOSE=1 && make install 
+
+RUN cd jsoncpp && mkdir build-${ARCH} && cd build-${ARCH} && \
+cmake -D CMAKE_CXX_COMPILER=$ARCH-$CMAKE_CXX_COMPILER \
+      -D CMAKE_SYSTEM_NAME=Windows \
+      -D CMAKE_INSTALL_PREFIX=$DEP_DIR_PREFIX-$ARCH \
+      -D JSONCPP_WITH_TESTS=false \
+      -D BUILD_SHARED_LIBS=true \
+      -D CMAKE_BUILD_TYPE=Release .. && make VERBOSE=1 && make install 
+      
+RUN cd openssl && [[ "$ARCH" == "x86_64" ]] && OUT="mingw64" || OUT="mingw" && \
+make clean || true && ./Configure --prefix=$DEP_DIR_PREFIX-$ARCH \
+--libdir=lib no-idea no-mdc2 no-rc5 shared $OUT \
+--cross-compile-prefix=$ARCH-w64-mingw32- && make VERBOSE=1 && make install
+
+RUN cp tap-windows6/src/tap-windows.h $DEP_DIR_PREFIX-$ARCH/include && \
+mkdir -p $DEP_DIR_PREFIX-$ARCH/asio 
+
+RUN cp -R asio/* $DEP_DIR_PREFIX-$ARCH/asio && \
+mkdir -p $DEP_DIR_PREFIX-$ARCH/xxHash
+
+RUN cp -R xxHash/* $DEP_DIR_PREFIX-$ARCH/xxHash && \
+mkdir -p $DEP_DIR_PREFIX-$ARCH
+
+
+RUN mkdir -p /tmp/deps_win/deps-x86_64/lib/ && \
+cp /deps-x86_64/lib/{libcrypto.a,libssl.a,liblz4.dll.a} /tmp/deps_win/deps-x86_64/lib/
+
+RUN mkdir -p /tmp/deps_win/deps-x86_64/includes/asio/ && \
+cp -R /deps-x86_64/asio/asio/include/* /tmp/deps_win/deps-x86_64/includes/asio/
+
+RUN cd /tmp/ && tar -cvzpf /build_windows_deps.tar.gz deps_win

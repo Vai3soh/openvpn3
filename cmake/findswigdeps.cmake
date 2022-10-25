@@ -3,7 +3,8 @@ find_package(PythonLibs)
 
 FIND_PACKAGE(SWIG 3.0)
 
-# We test building this library with python instead of java since that is easier to do and both languages should work
+# We test building this library with python instead of java since 
+# that is easier to do and both languages should work
 
 if (PYTHONLIBS_FOUND AND SWIG_FOUND)
     if (NOT WIN32)

@@ -1,30 +1,30 @@
 include(findcoredeps)
-include(findswigdeps)
+#include(findswigdeps) #remove pyhton deps, build for golang
 
-if (${BUILD_SWIG_LIB})
-    add_custom_command(
-            OUTPUT ovpncli_wrap.cxx ovpncli_wrap.h
-            COMMENT "Generating ovpncli Python swig files"
-            COMMAND ${SWIG_EXECUTABLE} -c++ -python -threads -DSWIG_PYTHON_2_UNICODE -outcurrentdir -I${CORE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/ovpncli.i
-            DEPENDS ovpncli.i
-    )
+FIND_PACKAGE(SWIG 3.0)
 
-    add_library(ovpnclilib SHARED
-            ovpncli.cpp
-            ovpncli_wrap.cxx
-            ovpncli_wrap.h
-            )
+EXECUTE_PROCESS( COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE )
+add_custom_command(
+		OUTPUT ovpncli_wrap.cxx ovpncli_wrap.h
+		COMMENT "Generating ovpncli GO swig files"
+		COMMAND ${SWIG_EXECUTABLE} -go -gccgo -c++ -intgosize 64 -outcurrentdir -I${CORE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/ovpncli.i
+		DEPENDS ovpncli.i
+) 
 
-    add_core_dependencies(ovpnclilib)
-    target_link_libraries(ovpnclilib ${PYTHON_LIBRARIES})
-    target_include_directories(ovpnclilib PRIVATE ${PYTHON_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR})
+add_library(ovpnclilib STATIC
+		ovpncli.cpp
+		ovpncli_wrap.cxx
+		ovpncli_wrap.h
+		)
 
-    # Use proper python library name to generate _ovpncli.so/dylib/dll
-    set_target_properties(ovpnclilib PROPERTIES OUTPUT_NAME "_ovpncli")
-    set_target_properties(ovpnclilib PROPERTIES PREFIX "")
+add_core_dependencies(ovpnclilib)
+target_include_directories(ovpnclilib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-    if (NOT WIN32)
-        # Swig generates code with deprecated python declarations
-        set_source_files_properties(ovpncli_wrap.cxx PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations -Wno-sometimes-uninitialized -Wno-class-memaccess -Wno-unknown-warning-option")
-    endif()
-endif ()
+# Use proper python library name to generate libopenvpn3_linux_x86_64.so/a/dylib/dll/
+set_target_properties(ovpnclilib PROPERTIES OUTPUT_NAME "libopenvpn3_${ARCHITECTURE}") 
+set_target_properties(ovpnclilib PROPERTIES PREFIX "")
+
+if (NOT WIN32)
+	# Swig generates code with deprecated python declarations
+	set_source_files_properties(ovpncli_wrap.cxx PROPERTIES) 
+endif()

@@ -1,0 +1,22 @@
+FROM win1:latest
+
+SHELL ["/bin/bash", "-c"]
+
+WORKDIR /
+
+ENV DEP_DIR_PREFIX=$PWD/deps \
+	CMAKE_C_COMPILER="w64-mingw32-gcc-posix" \
+	CMAKE_CXX_COMPILER="w64-mingw32-g++-posix" \
+	ARCH=x86_64 \
+	DL=/tmp/dl
+
+RUN rm -rf build-$ARCH && mkdir build-$ARCH && cd build-$ARCH && \
+DEP_DIR=$DEP_DIR_PREFIX-$ARCH OPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR:-$DEP_DIR_PREFIX-$ARCH} \
+cmake -D CMAKE_C_COMPILER=$ARCH-$CMAKE_C_COMPILER \
+	  -D CMAKE_CXX_COMPILER=$ARCH-$CMAKE_CXX_COMPILER \
+	  -D CMAKE_SYSTEM_NAME=Windows \
+	  -D CMAKE_PREFIX_PATH=/usr/local/$ARCH-w64-mingw32 \
+	  -D CMAKE_BUILD_TYPE=Release \
+	  -D USE_WERROR=false \
+	  -D CLI_OVPNDCOWIN=ON \
+	  /ovpn3/core/ && cmake --build . --verbose   

@@ -54,15 +54,15 @@ build_lz4 () {
 }
 
 download_mbedtls () {
-    if [ ! -f "download-cache/mbedtls-${MBEDTLS_VERSION}-apache.tgz" ]; then
+    if [ ! -f "download-cache/mbedtls-${MBEDTLS_VERSION}.tgz" ]; then
         wget -P download-cache/ \
-            "https://tls.mbed.org/download/mbedtls-${MBEDTLS_VERSION}-apache.tgz"
+             "https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/${MBEDTLS_VERSION}.tar.gz"
     fi
 }
 
 build_mbedtls () {
     if [ "$(cat ${PREFIX}/.mbedtls-version)" != "${MBEDTLS_VERSION}" ]; then
-        tar zxf download-cache/mbedtls-${MBEDTLS_VERSION}-apache.tgz
+        tar -xzpf download-cache/mbedtls-${MBEDTLS_VERSION}.tgz
         (
             cd "mbedtls-${MBEDTLS_VERSION}"
             make CC=$CC CXX=$CXX
