@@ -25,6 +25,8 @@ docker run -itd --name ${container} win2 bash
 
 docker cp ${container}:${path_client} ${client_dir}
 docker cp ${container}:/build_windows_deps.tar.gz ${client_dir}
+docker cp ${container}:/build-x86_64/test/ovpncli/ovpncli.exe build/windows/ovpncli.exe
+docker cp ${container}:/build-x86_64/test/ovpncli/ovpncliagent.exe build/windows/ovpncliagent.exe
 
 rm -rf ${client_dir}/client/{CMakeFiles,cmake_install.cmake,Makefile}
 
