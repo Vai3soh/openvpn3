@@ -1,4 +1,4 @@
-FROM debian:11
+FROM debian:12
 
 SHELL ["/bin/bash", "-c"]
  
@@ -20,18 +20,18 @@ ENV DL /ovpn3/dl
 ENV LIBRARY_PATH /ovpn3/core/build/test/ovpncli/ovpncli
  
 RUN mkdir $DEP_DIR && mkdir $DL && \
-     /ovpn3/core/scripts/linux/build-all && \
+     MTLS=0 /ovpn3/core/scripts/linux/build-all && \
      cd $O3/core/test/ovpncli && \
-     ECHO=1 PROF=linux ASIO=1 MTLS_SYS=1 LZ4_SYS=1 NOSSL=1 $O3/core/scripts/build cli && \
+     ECHO=1 PROF=linux ASIO=1 LZ4_SYS=1 OPENSSL_SYS=1 $O3/core/scripts/build cli && \
      cd $O3/core/test/ssl && \
-     ECHO=1 PROF=linux ASIO=1 MTLS_SYS=1 LZ4_SYS=1 NOSSL=1 $O3/core/scripts/build proto && \
+     ECHO=1 PROF=linux ASIO=1 LZ4_SYS=1 OPENSSL_SYS=1 $O3/core/scripts/build proto && \
     ./proto && \
     cd $O3/core && cd build && \
-    cmake -DUSE_MBEDTLS=on .. &&  cmake --build . --verbose && \
+    cmake .. &&  cmake --build . --verbose && \
     $LIBRARY_PATH -v
 
 RUN mkdir -p /tmp/deps/asio /tmp/deps/libs/ && \ 
 cp -R /ovpn3/deps/asio/asio/include/* /tmp/deps/asio/ && \
 cp /ovpn3/deps/lz4/lz4-linux/lib/liblz4.a /tmp/deps/libs/ && \
-cp /ovpn3/deps/mbedtls/mbedtls-linux/library/libmbedtls.a /tmp/deps/libs/ && cd /tmp/ && \
-tar -cvzpf /build_linux_deps.tar.gz deps
+#cp /ovpn3/deps/mbedtls/mbedtls-linux/library/libmbedtls.a /tmp/deps/libs/ && cd /tmp/ && \
+cd /tmp/ && tar -cvzpf /build_linux_deps.tar.gz deps

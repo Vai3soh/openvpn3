@@ -36,8 +36,8 @@ Add to string ovpncli.go:
 
 #cgo CFLAGS: -I${SRCDIR}
 #cgo linux LDFLAGS: -L${SRCDIR} -L${SRCDIR}/deps/libs/
-#cgo linux CXXFLAGS: -DASIO_STANDALONE -DHAVE_LZ4 -DLZ4_DISABLE_DEPRECATE_WARNINGS -DMBEDTLS_DEPRECATED_REMOVED -DUSE_ASIO -DUSE_MBEDTLS -I${SRCDIR}/deps/asio -Wall -Wsign-compare -std=gnu++14
-#cgo linux LDFLAGS: -lopenvpn3_Linux_x86_64 -lmbedtls -llz4 -lpthread
+#cgo linux CXXFLAGS: -DASIO_STANDALONE -DHAVE_LZ4 -DLZ4_DISABLE_DEPRECATE_WARNINGS -DMBEDTLS_DEPRECATED_REMOVED -DUSE_ASIO -DUSE_OPENSSL -I${SRCDIR}/deps/asio -Wall -Wsign-compare -std=gnu++14
+#cgo linux LDFLAGS: -lopenvpn3_Linux_x86_64 -lssl -lcrypto -llz4 -lpthread
 
 build binary:
 go build -x . 

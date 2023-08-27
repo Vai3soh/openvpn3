@@ -1,4 +1,4 @@
-FROM debian:11 as package
+FROM debian:12 as package
 
 RUN apt-get update && \
 apt-get install -y autoconf build-essential gcc-mingw-w64-i686-posix \
@@ -65,7 +65,7 @@ do patch -d asio -p1 < "/ovpn3/core/deps/asio/patches/$patchfile"; done
 RUN rm -rf xxHash && \
 git clone https://github.com/Cyan4973/xxHash.git && \
 portfile_url=https://raw.githubusercontent.com/microsoft/vcpkg/master/ports/xxhash/portfile.cmake && \
-gitref=$(wget -q -O- "$portfile_url" | grep -oP '\bREF\s+\S+' | cut -d' ' -f2) && \
+gitref=$(wget -q -O- "$portfile_url" | grep -oP '\bHEAD_REF\s+\S+' | cut -d' ' -f2) && \
 git -C xxHash checkout "${gitref}"
 
 RUN cd lz4 && mkdir build-${ARCH} && cd build-${ARCH} && \
